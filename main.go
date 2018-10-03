@@ -109,7 +109,7 @@ func main() {
 			continue
 		}
 
-		if !update.Message.IsCommand() {
+		if string(update.Message.Text[0]) != "/" {
 			if config.Conf.Settings.Debug {
 				log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent the message \"" + update.Message.Text + "\", but the text doesn't seems to be a command. Ignoring the message...")
 			}
@@ -420,10 +420,10 @@ func main() {
 				if outerr != nil {
 					Queue.SetCommandError(outerr)
 					/*
-					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "*Error*:"+"\n"+
-						"Failed to execute command (`"+cmd+"`): "+outerr.Error())
-					msg.ReplyToMessageID = update.Message.MessageID
-					bot.Send(msg)
+						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "*Error*:"+"\n"+
+							"Failed to execute command (`"+cmd+"`): "+outerr.Error())
+						msg.ReplyToMessageID = update.Message.MessageID
+						bot.Send(msg)
 					*/
 					if config.Conf.Settings.Debug {
 						log.Println("\tError executing the command! Retrying...")

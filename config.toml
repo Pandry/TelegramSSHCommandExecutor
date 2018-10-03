@@ -9,7 +9,8 @@
 [features]
     [features.commandname]
         commands = ["echo $PATH", "touch iwashere"]
-        retryOnFaliure = false
+        expectedOutputs = [".*", ""]
+        onFaliure = "interrupt" # retry, ignore or interrupt
 
 [knownservers]
     [knownservers.serverAlias]

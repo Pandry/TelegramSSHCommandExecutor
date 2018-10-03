@@ -7,7 +7,7 @@ import "errors"
 type Queue struct {
 	commandQueue []Command
 	running      int //Index
-	retryAllowed bool
+	onFail       int
 }
 
 //AddCommand is used for adding a command to the linked list
@@ -26,6 +26,7 @@ func (q *Queue) AddCommand(cmd string) {
 func (q *Queue) AddCommandAndExpOut(cmd string, exout string) {
 	if q.commandQueue == nil {
 		q.running = -1 //None running
+		q.onFail = Ignore
 	}
 	q.commandQueue = append(q.commandQueue, Command{
 		Command:        cmd,
@@ -168,12 +169,27 @@ func (q *Queue) GetCommandStatus() int {
 
 //IsRetryAllowed returns a bool that indicates if it's allowed to retry the command
 func (q *Queue) IsRetryAllowed() bool {
-	return q.retryAllowed
+	return q.onFail == Retry
 }
 
-//SetRetry takes a bool flag in input that tells if it's allowed to retry the command
-func (q *Queue) SetRetry(f bool) {
-	q.retryAllowed = f
+//ShuldIgnoreError returns a bool that indicates if the execution should ignore if an eventual error occours
+func (q *Queue) ShuldIgnoreError() bool {
+	return q.onFail == Ignore
+}
+
+//ShuldRetryOnError returns a bool that indicates if the execution should retry the command when an error occours
+func (q *Queue) ShuldRetryOnError() bool {
+	return q.onFail == Retry
+}
+
+//ShuldQuitOnError returns a bool that indicates if the execution should interrupt when an error occours
+func (q *Queue) ShuldQuitOnError() bool {
+	return q.onFail == Interrupt
+}
+
+//SetOnFail takes a int (consult the constants file) in input that tells if it's allowed to retry the command
+func (q *Queue) SetOnFail(f int) {
+	q.onFail = f
 }
 
 /*

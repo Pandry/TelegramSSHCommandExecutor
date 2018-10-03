@@ -27,7 +27,7 @@ type knownservers struct {
 type features struct {
 	Commands        []string
 	ExpectedOutputs []string
-	RetryOnFaliure  bool
+	OnFaliure       string
 }
 
 type allowedUsers struct {

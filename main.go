@@ -74,7 +74,8 @@ func main() {
 		log.Println("Connection established - Bot authorized on account " + bot.Self.UserName)
 	}
 
-	bot.Debug = config.Conf.Settings.Debug
+	//bot.Debug = config.Conf.Settings.Debug
+	bot.Debug = false
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -191,9 +192,6 @@ func main() {
 			if len(args) == 4 {
 				sshUsername = args[2]
 				sshPassword = args[3]
-				if config.Conf.Settings.Debug {
-					log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent the message \"" + update.Message.Text + "\". Command recognized!")
-				}
 			}
 			if len(args) > 4 {
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "*Error*:"+"\n"+
@@ -208,6 +206,9 @@ func main() {
 				}
 
 				continue
+			}
+			if config.Conf.Settings.Debug {
+				log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent the message \"" + update.Message.Text + "\". Command recognized!")
 			}
 
 			//Sets the SSH connection settings
@@ -263,12 +264,44 @@ func main() {
 			}
 			Queue := &queue.Queue{}
 			Queue.AddBulkCommandsAndOutput(config.Conf.Commands[args[0][1:]].Commands, config.Conf.Commands[args[0][1:]].ExpectedOutputs)
-			Queue.SetRetry(config.Conf.Commands[args[0]].RetryOnFaliure)
+
+			switch strings.ToLower(config.Conf.Commands[args[0][1:]].OnFaliure) {
+			case "ignore":
+				Queue.SetOnFail(queue.Ignore)
+				if config.Conf.Settings.Debug {
+					log.Println("\tSetting the fail policy to Ignore eventual errors.")
+				}
+				break
+			case "retry":
+				Queue.SetOnFail(queue.Retry)
+				if config.Conf.Settings.Debug {
+					log.Println("\tSetting the fail policy to Retry if an eventual error happens.")
+				}
+				break
+			case "abort":
+				Queue.SetOnFail(queue.Interrupt)
+				if config.Conf.Settings.Debug {
+					log.Println("\tSetting the fail policy to Interrupt the execution.")
+				}
+				break
+			case "interrupt":
+				Queue.SetOnFail(queue.Interrupt)
+				if config.Conf.Settings.Debug {
+					log.Println("\tSetting the fail policy to Abort(Interrupt) the execution.")
+				}
+				break
+			default:
+				if config.Conf.Settings.Debug {
+					log.Println("\tThe failure option \"" + config.Conf.Commands[args[0][1:]].OnFaliure + "\" was not identified. Allowed options: {Ignore|Retry|Interrupt}. Defaulting to Ignore")
+				}
+				Queue.SetOnFail(queue.Ignore)
+				break
+			}
 
 			messageID := sendJobStatus(Queue, bot, &update)
 
 			//for _, scriptLine := range Queue.GetNextCommandToExecute {
-			for i := 0; !Queue.IsOver() && i < Queue.GetQueueLength() + 3; i++ {
+			for i := 0; !Queue.IsOver() && i < Queue.GetQueueLength()+3; i++ {
 
 				if config.Conf.Settings.Debug {
 					log.Println("\tAttempting to create a new SSH session...")
@@ -330,24 +363,30 @@ func main() {
 				var cmd string
 				if Queue.GetCommandStatus() != queue.Success {
 					//If retry is allowed, retry, otherwise go on
-					if Queue.IsRetryAllowed() {
-						if config.Conf.Settings.Debug {
-							log.Println("\tLast command didn't succedeed - reloading command...")
+					if Queue.GetCommandStatus() == queue.Error || Queue.GetCommandStatus() == queue.OutputMismatch {
+						if Queue.ShuldQuitOnError() {
+							break
+						} else if Queue.IsRetryAllowed() {
+							if config.Conf.Settings.Debug {
+								log.Println("\tLast command didn't succedeed - reloading command...")
+							}
+							cmd, _ = Queue.GetActualCommandAndExecute(true)
+						} else {
+							//skip
+							if config.Conf.Settings.Debug {
+								log.Println("\tLast command didn't succedeed - ignoring and loading next command...")
+							}
+							cmd, _ = Queue.PopCommand()
 						}
-						cmd, _ = Queue.GetActualCommandAndExecute(true)
-					} else {
-						if config.Conf.Settings.Debug {
-							log.Println("\tLast command didn't succedeed - ignoring and loading next command...")
-						}
-						cmd, _ = Queue.PopCommand()
 					}
+
 				} else {
 					if config.Conf.Settings.Debug {
 						log.Println("\tLoading next command...")
 					}
 					cmd, _ = Queue.PopCommand()
 				}
-				editJobStatus(Queue, bot, &update, messageID)
+				refreshJobStatus(Queue, bot, &update, messageID)
 
 				/*
 					i indicates the iteration - that may not correspond with the actual command number
@@ -380,12 +419,12 @@ func main() {
 
 				if outerr != nil {
 					Queue.SetCommandError(outerr)
-
+					/*
 					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "*Error*:"+"\n"+
 						"Failed to execute command (`"+cmd+"`): "+outerr.Error())
 					msg.ReplyToMessageID = update.Message.MessageID
 					bot.Send(msg)
-
+					*/
 					if config.Conf.Settings.Debug {
 						log.Println("\tError executing the command! Retrying...")
 					}
@@ -409,16 +448,17 @@ func main() {
 					}
 				}
 
-				editJobStatus(Queue, bot, &update, messageID)
+				refreshJobStatus(Queue, bot, &update, messageID)
 
 				if Queue.IsOver() {
 					if config.Conf.Settings.Debug {
 						log.Println("\tThe queue is over")
 					}
-					sendReport(Queue, bot, &update)
 				}
-
 			}
+
+			refreshJobStatus(Queue, bot, &update, messageID)
+			sendReport(Queue, bot, &update)
 		}
 	}
 }
@@ -446,7 +486,7 @@ func sendJobStatus(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update
 	return sendStat.MessageID
 }
 
-func editJobStatus(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update, messageID int) {
+func refreshJobStatus(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update, messageID int) {
 	Jobstatuses := q.GetScriptsStatus()
 	var text string
 	for _, s := range Jobstatuses {

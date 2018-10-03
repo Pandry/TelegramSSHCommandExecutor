@@ -40,8 +40,7 @@ This program was created to remotely execute pre-made scripts via a telegram bot
 - [ ] Invert command and status order
 - [ ] Ellipsize commands too long in the status messages
 - [ ] Create config file if it's not found
-- [ ] Report's entities are incorrect sometimes
-- [ ] Split report message if exceed the max allowed message size
+- [X] Split report message if exceed the max allowed message size
 - [ ] Allow private key authentication
 - [ ] Per-host private key
 - [ ] Settings to interrupt script execution on error

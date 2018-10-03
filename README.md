@@ -39,7 +39,7 @@ This program was created to remotely execute pre-made scripts via a telegram bot
 - [ ] "Features" sounds bad in the config, change
 - [ ] Invert command and status order
 - [ ] Ellipsize commands too long in the status messages
-- [ ] Create config file if it's not found
+- [X] Create config file if it's not found
 - [X] Split report message if exceed the max allowed message size
 - [ ] Allow private key authentication
 - [ ] Per-host private key

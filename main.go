@@ -55,12 +55,12 @@ func main() {
 		}
 	}()
 
+	loadConfig(&features)
+
 	// out of the box fsnotify can watch a single file, or a single directory
 	if err := watcher.Add("config.toml"); err != nil {
 		log.Panic(err)
 	}
-
-	loadConfig(&features)
 
 	if config.Conf.Settings.Debug {
 		log.Println("Initializig Telegram bot API library")

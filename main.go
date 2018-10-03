@@ -8,8 +8,8 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	"TelegramSSHCommandExecutor/config"
-	"TelegramSSHCommandExecutor/queue"
+	"./config"
+	"./queue"
 
 	"golang.org/x/crypto/ssh"
 
@@ -314,7 +314,7 @@ func sendReport(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	Jobstatuses := q.GetCommandQueue()
 	text := "📝 <strong>REPORT</strong>"
 	for i, cmd := range Jobstatuses {
-		text += "\n\n" + strconv.Itoa(i+1) + ") (<code>" + cmd.Command + "</code>) "
+		text += "\n\n" + strconv.Itoa(i+1) + ") (<code>" + escapeXMLTags(cmd.Command) + "</code>) "
 		switch cmd.Status {
 		//✅🕐⚙️❌
 		case queue.Queued:
@@ -334,69 +334,92 @@ func sendReport(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 			break
 		}
 		text += "\n<strong>OUTPUT</strong>:\n"
-		if strings.TrimSpace(cmd.Output) == "" {
+		if escapeXMLTags(strings.TrimSpace(cmd.Output)) == "" {
 			text += "<i>None</i>"
 		} else {
-			text += "<code>" + strings.TrimSpace(cmd.Output) + "</code>\n"
+			text += "<code>" + escapeXMLTags(strings.TrimSpace(cmd.Output)) + "</code>\n"
 		}
 
 		if cmd.ExpectedOutput != "" && cmd.Status == queue.OutputMismatch {
 			text += "\n<strong>EXPECTED OUTPUT REGEX</strong>:\n"
-			text += "<code>" + cmd.ExpectedOutput + "</code>\n\n\n"
+			text += "<code>" + escapeXMLTags(cmd.ExpectedOutput) + "</code>\n\n\n"
 
 		}
 	}
-	//4096 is the limit
-	//LIMIT BROKEN
+	//4096 is the telegram limit
 	const maxMessageLen = 4080
 	var reportMessages []string
-	strInit := ""
 
 	if len(text) > maxMessageLen {
-		text = "⚠️ <strong>OUTPUT IS LONGER THAN EXPECTED, THE OUTPUT WILL NOT BE FORMATTED AND COULD BE DISTORED!</strong> ⚠️\n\n" + text
+		text = "⚠️ <strong>OUTPUT IS LONGER THAN EXPECTED, THE OUTPUT WILL BE SPLITTED IN MULTIPLE MESSAGES!</strong> ⚠️\n\n" + text
 		log.Println(text)
 	}
 
+	closingTag, openingTag := "", ""
+	messageContinuation := false
+	assignOpenTag := false
+	sensibleTags := [...]string{"code", "strong", "i"}
+
 	for i := 1; i < len(text); i += maxMessageLen {
-		strTerm := ""
-		rgx := regexp.MustCompile("<strong>.*</strong>")
-		matches := len(rgx.FindAllStringIndex(text[i-1:], -1))
-
-		if matches%2 != 0 {
-			strTerm = "</strong>"
-			strInit = "<strong>"
-		}
-
-		rgx = regexp.MustCompile("<code>.*</code>")
-		matches = len(rgx.FindAllStringIndex(text[i-1:], -1))
-
-		if matches%2 != 0 {
-			strTerm = "</code>"
-			strInit = "<code>"
-		}
-
-		rgx = regexp.MustCompile("<i>.*</i>")
-		matches = len(rgx.FindAllStringIndex(text[i-1:], -1))
-
-		if matches%2 != 0 {
-			strTerm = "</i>"
-			strInit = "<i>"
-		}
-
+		var submessage string
 		if i-1+maxMessageLen > len(text) {
-
-			reportMessages = append(reportMessages, strInit+text[i-1:]+strTerm)
-			strInit, strTerm = "", ""
+			submessage = text[i-1:]
 		} else {
-			reportMessages = append(reportMessages, strInit+text[i-1:i-1+maxMessageLen]+strTerm)
-			strInit, strTerm = "", ""
+			submessage = text[i-1 : i-1+maxMessageLen]
+		}
 
+		//Used the first cycle
+		var tempOpenTag string
+
+		if messageContinuation {
+			if strings.Count(submessage, closingTag) != strings.Count(submessage, openingTag) {
+				//Closing in this message
+				messageContinuation = false
+				closingTag = ""
+			}
+		} else {
+			//The message is not closing
+
+			for _, tag := range sensibleTags {
+				if strings.Count(submessage, "</"+tag+">") < strings.Count(submessage, "<"+tag+">") {
+					closingTag = "</" + tag + ">"
+					tempOpenTag = "<" + tag + ">" //The opening tag needs to be setted  after the message send
+					messageContinuation = true
+					assignOpenTag = true
+					break
+				}
+			}
+
+		}
+
+		reportMessages = append(reportMessages, openingTag+submessage+closingTag)
+
+		if !messageContinuation {
+			openingTag = ""
+		} else if assignOpenTag {
+			openingTag = tempOpenTag
+			assignOpenTag = false
 		}
 	}
+
 	for _, textF := range reportMessages {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, textF)
 		msg.ReplyToMessageID = update.Message.MessageID
 		msg.ParseMode = tgbotapi.ModeHTML
-		bot.Send(msg)
+		_, err := bot.Send(msg)
+		if err != nil && config.Conf.Settings.Debug {
+			log.Println("Error sending message: " + "\n\n\n\n" + textF + "\n\n\n\n\n\n")
+		}
 	}
+}
+
+func escapeXMLTags(s string) string {
+	return strings.Replace(
+		strings.Replace(
+			strings.Replace(
+				strings.Replace(
+					s, "\"", "&quot;", -1),
+				"&", "&amp;", -1),
+			">", "&gt;", -1),
+		"<", "&lt;", -1)
 }

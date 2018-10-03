@@ -108,7 +108,7 @@ func main() {
 			continue
 		}
 
-		if update.Message.IsCommand() {
+		if !update.Message.IsCommand() {
 			if config.Conf.Settings.Debug {
 				log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent the message \"" + update.Message.Text + "\", but the text doesn't seems to be a command. Ignoring the message...")
 			}
@@ -268,7 +268,7 @@ func main() {
 			messageID := sendJobStatus(Queue, bot, &update)
 
 			//for _, scriptLine := range Queue.GetNextCommandToExecute {
-			for i := 0; !Queue.IsOver() && 3+i < Queue.GetQueueLength(); i++ {
+			for i := 0; !Queue.IsOver() && i < Queue.GetQueueLength() + 3; i++ {
 
 				if config.Conf.Settings.Debug {
 					log.Println("\tAttempting to create a new SSH session...")
@@ -347,6 +347,7 @@ func main() {
 					}
 					cmd, _ = Queue.PopCommand()
 				}
+				editJobStatus(Queue, bot, &update, messageID)
 
 				/*
 					i indicates the iteration - that may not correspond with the actual command number

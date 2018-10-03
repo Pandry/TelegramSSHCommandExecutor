@@ -7,6 +7,7 @@ import "errors"
 type Queue struct {
 	commandQueue []Command
 	running      int //Index
+	retryAllowed bool
 }
 
 //AddCommand is used for adding a command to the linked list
@@ -97,18 +98,82 @@ func (q *Queue) GetQueueLength() int {
 	return len(q.commandQueue)
 }
 
-//GetNextCommandToExecute returns the next command to execute and put it in a executing state
-func (q *Queue) GetNextCommandToExecute() (string, error) {
+//GetActualCommand returns the command that should be in execution without putting it into a executing state
+func (q *Queue) GetActualCommand() (string, error) {
+	if q.running+1 > len(q.commandQueue) {
+		return "", errors.New("Commands are finished")
+	}
+	//If is queued, returns next one
+	if q.commandQueue[q.running].Status != Queued {
+		return q.commandQueue[q.running].Command, errors.New("Command were already Executed")
+	}
+	return q.commandQueue[q.running].Command, nil
+}
+
+//GetActualCommandAndExecute returns the command that should be in execution without putting it into a executing state
+func (q *Queue) GetActualCommandAndExecute(force bool) (string, error) {
+	if q.running+1 > len(q.commandQueue) {
+		return "", errors.New("Commands are finished")
+	}
+	//If is queued, returns next one
+	if !force {
+		if q.commandQueue[q.running].Status != Queued {
+			return q.commandQueue[q.running].Command, errors.New("Command were already Executed")
+		}
+	} else {
+		q.commandQueue[q.running].Status = Executing
+	}
+	return q.commandQueue[q.running].Command, nil
+}
+
+//PopCommand returns the next command to execute and put it in a executing state
+func (q *Queue) PopCommand() (string, error) {
 	q.running++
 	if q.running+1 > len(q.commandQueue) {
 		return "", errors.New("Commands are finished")
 	}
 	//If is queued, returns next one
 	if q.commandQueue[q.running].Status != Queued {
-		return "", errors.New("Command were already Executed")
+		return q.commandQueue[q.running].Command, errors.New("Command were already Executed")
 	}
 	q.commandQueue[q.running].Status = Executing
 	return q.commandQueue[q.running].Command, nil
+}
+
+//IsOver returns a bool that indicates if the queue is over or there are other commans to execute
+func (q *Queue) IsOver() bool {
+	if q.running+2 > len(q.commandQueue) {
+		return true
+	}
+	return false
+}
+
+//IncrementQueue returns a bool that indicates if the queue is over or there are other commans to execute
+func (q *Queue) IncrementQueue() bool {
+	if q.running+2 > len(q.commandQueue) {
+		return false
+	}
+	q.running++
+	return true
+}
+
+//GetCommandStatus returns the actual command status
+//WARNING - returns the Success status if the queque is not started yet
+func (q *Queue) GetCommandStatus() int {
+	if q.running == -1 {
+		return Success
+	}
+	return q.commandQueue[q.running].Status
+}
+
+//IsRetryAllowed returns a bool that indicates if it's allowed to retry the command
+func (q *Queue) IsRetryAllowed() bool {
+	return q.retryAllowed
+}
+
+//SetRetry takes a bool flag in input that tells if it's allowed to retry the command
+func (q *Queue) SetRetry(f bool) {
+	q.retryAllowed = f
 }
 
 /*

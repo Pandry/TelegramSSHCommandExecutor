@@ -62,14 +62,19 @@ func main() {
 
 	loadConfig(&features)
 
+	if config.Conf.Settings.Debug {
+		log.Println("Initializig Telegram bot API library")
+	}
 	bot, err := tgbotapi.NewBotAPI(config.Conf.Telegram.TelegramAPIToken)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	bot.Debug = config.Conf.Settings.Debug
+	if config.Conf.Settings.Debug {
+		log.Println("Connection established - Bot authorized on account " + bot.Self.UserName)
+	}
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	bot.Debug = config.Conf.Settings.Debug
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -82,18 +87,31 @@ func main() {
 		}
 
 		if update.Message.Text == "" {
+			if config.Conf.Settings.Debug {
+				log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent a message to the bot, but the body message is empty. Ignoring the message...")
+			}
 			continue
 		}
 
-		isFromAlowedUser := false
+		isFromAllowedUser := false
 		for _, user := range config.Conf.AllowedUsers {
 			if strings.ToLower(update.Message.From.UserName) != strings.ToLower(user.UserName) && update.Message.From.ID != user.ID {
 				continue
 			}
-			isFromAlowedUser = true
+			isFromAllowedUser = true
 		}
 
-		if !isFromAlowedUser {
+		if !isFromAllowedUser {
+			if config.Conf.Settings.Debug {
+				log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent a message to the bot, but it's not whitelisted. Ignoring the message...")
+			}
+			continue
+		}
+
+		if update.Message.IsCommand() {
+			if config.Conf.Settings.Debug {
+				log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent the message \"" + update.Message.Text + "\", but the text doesn't seems to be a command. Ignoring the message...")
+			}
 			continue
 		}
 
@@ -108,6 +126,9 @@ func main() {
 			}
 		}
 		if !presentFeature {
+			if config.Conf.Settings.Debug {
+				log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent the message \"" + update.Message.Text + "\", but the command is not recognized. Ignoring the message...")
+			}
 			continue
 		}
 
@@ -118,6 +139,10 @@ func main() {
 			msg.ReplyToMessageID = update.Message.MessageID
 			msg.ParseMode = tgbotapi.ModeMarkdown
 			bot.Send(msg)
+
+			if config.Conf.Settings.Debug {
+				log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent the message \"" + update.Message.Text + "\", but the argument is only one.")
+			}
 			continue
 		}
 		if len(args) > 1 {
@@ -129,10 +154,18 @@ func main() {
 				msg.ReplyToMessageID = update.Message.MessageID
 				msg.ParseMode = tgbotapi.ModeMarkdown
 				bot.Send(msg)
+
+				if config.Conf.Settings.Debug {
+					log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent the message \"" + update.Message.Text + "\", but the 2nd argument doesn't looks like a valid IP. Ignoring the message...")
+				}
 				continue
 			}
 			//Auto-add poort 22 if missing
 			if !strings.ContainsAny(args[1], ":") {
+				if config.Conf.Settings.Debug {
+					log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent the message \"" + update.Message.Text + "\" but the port was not specified, assuming 22.")
+				}
+
 				args[1] += ":22"
 			}
 			for _, s := range config.Conf.KnownServers {
@@ -149,11 +182,18 @@ func main() {
 				msg.ReplyToMessageID = update.Message.MessageID
 				msg.ParseMode = tgbotapi.ModeMarkdown
 				bot.Send(msg)
+
+				if config.Conf.Settings.Debug {
+					log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent the message \"" + update.Message.Text + "\" but the arguments are ambiguous. ")
+				}
 				continue
 			}
 			if len(args) == 4 {
 				sshUsername = args[2]
 				sshPassword = args[3]
+				if config.Conf.Settings.Debug {
+					log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent the message \"" + update.Message.Text + "\". Command recognized!")
+				}
 			}
 			if len(args) > 4 {
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "*Error*:"+"\n"+
@@ -162,6 +202,11 @@ func main() {
 				msg.ReplyToMessageID = update.Message.MessageID
 				msg.ParseMode = tgbotapi.ModeMarkdown
 				bot.Send(msg)
+
+				if config.Conf.Settings.Debug {
+					log.Println("User @" + update.Message.From.UserName + "[" + strconv.Itoa(update.Message.From.ID) + "] sent the message \"" + update.Message.Text + "\" but the arguments are more than four. Ignoring the message...")
+				}
+
 				continue
 			}
 
@@ -176,6 +221,10 @@ func main() {
 					HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 				}*/
 
+			if config.Conf.Settings.Debug {
+				log.Println("\tSetting SSH client configuration...")
+			}
+
 			clientConfig := &ssh.ClientConfig{
 				User: sshUsername,
 				Auth: []ssh.AuthMethod{
@@ -187,6 +236,9 @@ func main() {
 			}
 
 			//Try to establish the SSH connection
+			if config.Conf.Settings.Debug {
+				log.Println("\tTrying to establish the SSH connection...")
+			}
 			conn, err := ssh.Dial("tcp", sshIP, clientConfig)
 			if err != nil {
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "*Error*:"+"\n"+
@@ -194,18 +246,33 @@ func main() {
 				msg.ReplyToMessageID = update.Message.MessageID
 				msg.ParseMode = tgbotapi.ModeMarkdown
 				bot.Send(msg)
+
+				if config.Conf.Settings.Debug {
+					log.Println("\tFailed to connect to establish a connection with the given host!")
+				}
 				continue
+			}
+			if config.Conf.Settings.Debug {
+				log.Println("\tSSH connection established!")
 			}
 			defer conn.Close()
 
 			//script := []string{"echo $PATH", "touch iwashere", "echo $PATH"}
+			if config.Conf.Settings.Debug {
+				log.Println("\tAdding the commands to the execution queue...")
+			}
 			Queue := &queue.Queue{}
 			Queue.AddBulkCommandsAndOutput(config.Conf.Commands[args[0][1:]].Commands, config.Conf.Commands[args[0][1:]].ExpectedOutputs)
+			Queue.SetRetry(config.Conf.Commands[args[0]].RetryOnFaliure)
 
 			messageID := sendJobStatus(Queue, bot, &update)
 
 			//for _, scriptLine := range Queue.GetNextCommandToExecute {
-			for i := 0; i < Queue.GetQueueLength(); i++ {
+			for i := 0; !Queue.IsOver() && 3+i < Queue.GetQueueLength(); i++ {
+
+				if config.Conf.Settings.Debug {
+					log.Println("\tAttempting to create a new SSH session...")
+				}
 
 				//Try to create a new SSH session
 				session, err := conn.NewSession()
@@ -215,7 +282,14 @@ func main() {
 					msg.ReplyToMessageID = update.Message.MessageID
 					msg.ParseMode = tgbotapi.ModeMarkdown
 					bot.Send(msg)
+					if config.Conf.Settings.Debug {
+						log.Println("\tFailed to create a new SSH session! Retrying...")
+					}
 					continue
+				}
+
+				if config.Conf.Settings.Debug {
+					log.Println("\tSSH session successfully created")
 				}
 				defer session.Close()
 
@@ -229,6 +303,11 @@ func main() {
 
 				//Try to request a virtual terminal
 				//err = session.RequestPty("xterm", 80, 40, modes)
+
+				if config.Conf.Settings.Debug {
+					log.Println("\tTrying to create the virtual terminal size (45 characters x 40 lines)...")
+				}
+
 				err = session.RequestPty("xterm", 45, 40, modes)
 				if err != nil {
 					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "*Error*:"+"\n"+
@@ -236,38 +315,105 @@ func main() {
 					msg.ReplyToMessageID = update.Message.MessageID
 					msg.ParseMode = tgbotapi.ModeMarkdown
 					bot.Send(msg)
+
+					if config.Conf.Settings.Debug {
+						log.Println("\tFailed to create the virtual terminal size! Retrying...")
+					}
+
 					continue
 				}
 
-				cmd, _ := Queue.GetNextCommandToExecute()
+				if config.Conf.Settings.Debug {
+					log.Println("\tVirtual terminal correctly created")
+				}
+
+				var cmd string
+				if Queue.GetCommandStatus() != queue.Success {
+					//If retry is allowed, retry, otherwise go on
+					if Queue.IsRetryAllowed() {
+						if config.Conf.Settings.Debug {
+							log.Println("\tLast command didn't succedeed - reloading command...")
+						}
+						cmd, _ = Queue.GetActualCommandAndExecute(true)
+					} else {
+						if config.Conf.Settings.Debug {
+							log.Println("\tLast command didn't succedeed - ignoring and loading next command...")
+						}
+						cmd, _ = Queue.PopCommand()
+					}
+				} else {
+					if config.Conf.Settings.Debug {
+						log.Println("\tLoading next command...")
+					}
+					cmd, _ = Queue.PopCommand()
+				}
+
+				/*
+					i indicates the iteration - that may not correspond with the actual command number
+					if config.Conf.Settings.Debug {
+						var suffix string
+						switch (i+1)%10{
+							case 1
+								suffix = "st"
+							case 2
+								suffix = "nd"
+							case 3
+								suffix = "rd"
+							default
+								suffix = "th"
+						}
+
+						log.Println("\tExecuting the " + strconv.Itoa(i+1) + suffix +" command (" + cmd + ")...")
+					}
+				*/
+
 				regexStr := Queue.GetExpectedOutput()
 				rgx := regexp.MustCompile(regexStr)
 				//output, outerr := session.Output(cmd)
-				output, _ := session.Output(cmd)
+				if config.Conf.Settings.Debug {
+					log.Println("\tExecuting command...")
+				}
+				output, outerr := session.Output(cmd)
 				outputString := strings.Replace(string(output), "\r", "\n", -1)
 				defer session.Close()
 
-				if err != nil {
-					Queue.SetCommandError(err)
+				if outerr != nil {
+					Queue.SetCommandError(outerr)
 
 					msg := tgbotapi.NewMessage(update.Message.Chat.ID, "*Error*:"+"\n"+
-						"Failed to execute command (`"+cmd+"`): "+err.Error())
+						"Failed to execute command (`"+cmd+"`): "+outerr.Error())
 					msg.ReplyToMessageID = update.Message.MessageID
 					bot.Send(msg)
+
+					if config.Conf.Settings.Debug {
+						log.Println("\tError executing the command! Retrying...")
+					}
 					continue
 				} else if regexStr != "" {
 					if !rgx.MatchString(outputString) {
 						Queue.SetCommandOutputMismatch(outputString)
+						if config.Conf.Settings.Debug {
+							log.Println("\tThe comman executed successfully but the expected output doesn't match")
+						}
 					} else {
 						Queue.SetCommandOutput(outputString)
+						if config.Conf.Settings.Debug {
+							log.Println("\tThe comman executed successfully and the expected output match")
+						}
 					}
 				} else {
 					Queue.SetCommandOutput(outputString)
+					if config.Conf.Settings.Debug {
+						log.Println("\tThe comman executed successfully ")
+					}
 				}
 
 				editJobStatus(Queue, bot, &update, messageID)
 
-				if i+1 == Queue.GetQueueLength() {
+				if Queue.IsOver() {
+					if config.Conf.Settings.Debug {
+						log.Println("\tThe queue is over")
+					}
 					sendReport(Queue, bot, &update)
 				}
 
@@ -408,7 +554,7 @@ func sendReport(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 		msg.ParseMode = tgbotapi.ModeHTML
 		_, err := bot.Send(msg)
 		if err != nil && config.Conf.Settings.Debug {
-			log.Println("Error sending message: " + "\n\n\n\n" + textF + "\n\n\n\n\n\n")
+			log.Println("Error sending message: " + "\n\n\n\n" + textF + "\n\n\n" + err.Error())
 		}
 	}
 }

@@ -15,7 +15,7 @@ type telegram struct {
 type settings struct {
 	DefaultUsername string
 	DefaultPassword string
-	Debug bool
+	Debug           bool
 }
 
 type knownservers struct {
@@ -25,8 +25,9 @@ type knownservers struct {
 }
 
 type features struct {
-	Commands       []string
+	Commands        []string
 	ExpectedOutputs []string
+	RetryOnFaliure  bool
 }
 
 type allowedUsers struct {

@@ -244,7 +244,7 @@ func main() {
 				rgx := regexp.MustCompile(regexStr)
 				//output, outerr := session.Output(cmd)
 				output, _ := session.Output(cmd)
-				outputString := string(output)
+				outputString := strings.Replace(string(output), "\r", "\n", -1)
 				defer session.Close()
 
 				if err != nil {

@@ -35,7 +35,7 @@ This program was created to remotely execute pre-made scripts via a telegram bot
 ## TODOs
 - [X] Read from a config file
 - [X] Live-reload the configuration file
-- [ ] Username whitelist to caps insensitive
+- [X] Username whitelist to caps insensitive
 - [ ] "Features" sounds bad in the config, change
 - [ ] Invert command and status order
 - [ ] Ellipsize commands too long in the status messages

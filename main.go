@@ -87,7 +87,7 @@ func main() {
 
 		isFromAlowedUser := false
 		for _, user := range config.Conf.AllowedUsers {
-			if update.Message.From.UserName != user.UserName && update.Message.From.ID != user.ID {
+			if strings.ToLower(update.Message.From.UserName) != strings.ToLower(user.UserName) && update.Message.From.ID != user.ID {
 				continue
 			}
 			isFromAlowedUser = true

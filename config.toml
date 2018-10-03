@@ -1,0 +1,23 @@
+[telegram]
+    TelegramAPIToken = "123456789:AbCdEf5705JwQr948bRjr78buyG8UYUg95f"
+
+[settings]
+    debug = false
+    defaultUsername = "ubnt"
+    defaultPassword = "ubnt"
+
+[features]
+    [features.commandname]
+        commands = ["echo $PATH", "touch iwashere"]
+
+[knownservers]
+    [knownservers.serverAlias]
+        IP="1.2.3.4:2109"
+        Username = "customuser"
+        Password = "ezpassword"
+
+[allowedUsers]
+    [allowedUsers.userAlias1]
+        username = "yourAllowedUsername"
+    [allowedUsers.userAlias2]
+        ID = 12345678

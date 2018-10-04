@@ -22,7 +22,7 @@ This program was created to remotely execute pre-made scripts via a telegram bot
 [knownservers]
     [knownservers.home]
         IP="10.0.1.1:2221"
-        Username = "test"
+        Username = "root"
         Password = "testpsw"
 
 [allowedUsers]

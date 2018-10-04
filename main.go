@@ -494,7 +494,7 @@ func getStatusString(q *queue.Queue) string {
 	}
 	header := []string{"*Command*`", "`|`  `*Status*:            "}
 	headerText := header[0]
-	for i := 3; i < config.Conf.Settings.MaxMessageColumns-len(utils.RemoveMarkdownSyntax(header[0]))+len(utils.RemoveMarkdownSyntax(header[1])); i++ {
+	for i := 3; i < config.Conf.Settings.MaxMessageColumns-len(utils.RemoveMarkdownSyntax(header[0]))-len(utils.RemoveMarkdownSyntax(header[1])); i++ {
 		headerText += " "
 	}
 	headerText += header[1] + "\n"
@@ -505,7 +505,7 @@ func sendReport(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	Jobstatuses := q.GetCommandQueue()
 	text := "📝 <strong>REPORT</strong>"
 	for i, cmd := range Jobstatuses {
-		text += "\n\n" + strconv.Itoa(i+1) + ") (<code>" + escapeXMLTags(cmd.Command) + "</code>) "
+		text += "\n\n" + strconv.Itoa(i+1) + ") (<code>" + utils.EscapeXMLTags(cmd.Command) + "</code>) "
 		switch cmd.Status {
 		//✅🕐⚙️❌
 		case queue.Queued:
@@ -525,15 +525,15 @@ func sendReport(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 			break
 		}
 		text += "\n<strong>OUTPUT</strong>:\n"
-		if escapeXMLTags(strings.TrimSpace(cmd.Output)) == "" {
+		if utils.EscapeXMLTags(strings.TrimSpace(cmd.Output)) == "" {
 			text += "<i>None</i>"
 		} else {
-			text += "<code>" + escapeXMLTags(strings.TrimSpace(cmd.Output)) + "</code>\n"
+			text += "<code>" + utils.EscapeXMLTags(strings.TrimSpace(cmd.Output)) + "</code>\n"
 		}
 
 		if cmd.ExpectedOutput != "" && cmd.Status == queue.OutputMismatch {
 			text += "\n<strong>EXPECTED OUTPUT REGEX</strong>:\n"
-			text += "<code>" + escapeXMLTags(cmd.ExpectedOutput) + "</code>\n\n\n"
+			text += "<code>" + utils.EscapeXMLTags(cmd.ExpectedOutput) + "</code>\n\n\n"
 
 		}
 	}
@@ -603,4 +603,3 @@ func sendReport(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 		}
 	}
 }
-

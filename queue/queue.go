@@ -55,16 +55,16 @@ func (q *Queue) GetScriptsStatus() []string {
 			cres = " 🕐  Queued         "
 			break
 		case Executing:
-			cres = " ⚙️  Executing      "
+			cres = "⚙️  Executing      "
 			break
 		case Success:
 			cres = "✅  Success          "
 			break
 		case Error:
-			cres = " ❌  Error           "
+			cres = " ❌  Error            "
 			break
 		case OutputMismatch:
-			cres = " ❗️  Output Mismatch"
+			cres = "❗️  Output Mismatch"
 			break
 		}
 		cres = _CommandStatusSeparator + cres
@@ -72,10 +72,10 @@ func (q *Queue) GetScriptsStatus() []string {
 		var commandText string
 		commandText = "`" + cmd.Command
 		if len(cmd.Command)-3 > avSpace {
-			commandText = cmd.Command[0 : len(cmd.Command)-avSpace-1-3]
+			commandText = cmd.Command[0 : avSpace-2]
 			commandText = "`" + commandText + "...`"
 		} else {
-			for i := 0; i < avSpace-len(cmd.Command)+len(utils.RemoveMarkdownSyntax(cres)); i++ {
+			for i := 0; i < avSpace-len(cmd.Command); i++ {
 				commandText += " "
 			}
 			commandText += "`"

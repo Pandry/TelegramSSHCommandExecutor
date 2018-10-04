@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -10,15 +11,12 @@ import (
 
 	"./config"
 	"./queue"
+	"./utils"
 
 	"golang.org/x/crypto/ssh"
 
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 )
-
-//TODO
-// - split report message if too long
-// - improve comments
 
 func loadConfig(features *[]string) {
 	config.LoadDefaultConfig()
@@ -28,6 +26,7 @@ func loadConfig(features *[]string) {
 func main() {
 
 	var features []string
+	loadConfig(&features)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -55,8 +54,6 @@ func main() {
 		}
 	}()
 
-	loadConfig(&features)
-
 	// out of the box fsnotify can watch a single file, or a single directory
 	if err := watcher.Add("config.toml"); err != nil {
 		log.Panic(err)
@@ -67,6 +64,8 @@ func main() {
 	}
 	bot, err := tgbotapi.NewBotAPI(config.Conf.Telegram.TelegramAPIToken)
 	if err != nil {
+		log.Println("Could not established a connection to the telegram servers - Check the bot's token")
+		os.Exit(1)
 		log.Panic(err)
 	}
 
@@ -474,12 +473,7 @@ func sshInteractive(user, instruction string, questions []string, echos []bool) 
 }
 
 func sendJobStatus(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update) int {
-	Jobstatuses := q.GetScriptsStatus()
-	var text string
-	for _, s := range Jobstatuses {
-		text += s + "\n"
-	}
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "*Status* ‏‏‎  ‏‏‎  ‏‏‎  ‏‏‎  ‏‏‎ | *Command list*:\n"+text) //Special char [ ‏‏‎ ]
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, getStatusString(q)) //Special char [ ‏‏‎ ]
 	msg.ReplyToMessageID = update.Message.MessageID
 	msg.ParseMode = tgbotapi.ModeMarkdown
 	sendStat, _ := bot.Send(msg)
@@ -487,14 +481,24 @@ func sendJobStatus(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update
 }
 
 func refreshJobStatus(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update, messageID int) {
+	msg := tgbotapi.NewEditMessageText(update.Message.Chat.ID, messageID, getStatusString(q))
+	msg.ParseMode = tgbotapi.ModeMarkdown
+	bot.Send(msg)
+}
+
+func getStatusString(q *queue.Queue) string {
 	Jobstatuses := q.GetScriptsStatus()
 	var text string
 	for _, s := range Jobstatuses {
 		text += s + "\n"
 	}
-	msg := tgbotapi.NewEditMessageText(update.Message.Chat.ID, messageID, "*Status* | *Command list*:\n"+text)
-	msg.ParseMode = tgbotapi.ModeMarkdown
-	bot.Send(msg)
+	header := []string{"*Command*`", "`|`  `*Status*:            "}
+	headerText := header[0]
+	for i := 3; i < config.Conf.Settings.MaxMessageColumns-len(utils.RemoveMarkdownSyntax(header[0]))+len(utils.RemoveMarkdownSyntax(header[1])); i++ {
+		headerText += " "
+	}
+	headerText += header[1] + "\n"
+	return headerText + text
 }
 
 func sendReport(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update) {

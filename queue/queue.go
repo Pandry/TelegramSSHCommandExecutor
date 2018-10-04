@@ -1,6 +1,12 @@
 package queue
 
-import "errors"
+import (
+	"errors"
+
+	"../utils"
+
+	"../config"
+)
 
 //Queue is a struct containing the first command pointer and the count
 //Emulates a list
@@ -9,6 +15,8 @@ type Queue struct {
 	running      int //Index
 	onFail       int
 }
+
+const _CommandStatusSeparator = "` `|` `"
 
 //AddCommand is used for adding a command to the linked list
 func (q *Queue) AddCommand(cmd string) {
@@ -44,22 +52,35 @@ func (q *Queue) GetScriptsStatus() []string {
 		switch cmd.Status {
 		//✅🕐⚙️❌❗️
 		case Queued:
-			cres = "🕐  Queued          - "
+			cres = " 🕐  Queued         "
 			break
 		case Executing:
-			cres = "⚙️  Executing       - "
+			cres = " ⚙️  Executing      "
 			break
 		case Success:
-			cres = "✅  Success         - "
+			cres = "✅  Success          "
 			break
 		case Error:
-			cres = "❌  Error           - "
+			cres = " ❌  Error           "
 			break
 		case OutputMismatch:
-			cres = "❗️  Output Mismatch - "
+			cres = " ❗️  Output Mismatch"
 			break
 		}
-		cres += cmd.Command
+		cres = _CommandStatusSeparator + cres
+		avSpace := config.Conf.Settings.MaxMessageColumns - len(utils.RemoveMarkdownSyntax(cres)) //Emojis count twice
+		var commandText string
+		commandText = "`" + cmd.Command
+		if len(cmd.Command)-3 > avSpace {
+			commandText = cmd.Command[0 : len(cmd.Command)-avSpace-1-3]
+			commandText = "`" + commandText + "...`"
+		} else {
+			for i := 0; i < avSpace-len(cmd.Command)+len(utils.RemoveMarkdownSyntax(cres)); i++ {
+				commandText += " "
+			}
+			commandText += "`"
+		}
+		cres = commandText + cres
 		res = append(res, cres)
 	}
 	return res

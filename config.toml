@@ -3,6 +3,7 @@
 
 [settings]
     debug = false
+    maxMessageColumns = 35
     defaultUsername = "ubnt"
     defaultPassword = "ubnt"
 

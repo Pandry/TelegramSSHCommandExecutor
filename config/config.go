@@ -18,8 +18,9 @@ func LoadDefaultConfig() {
 
 func importConfig(path string) {
 	b, err := ioutil.ReadFile(path) // just pass the file name
-	if err.Error() == "open "+path+": The system cannot find the file specified." {
-		defConfig := `[telegram]
+	if err != nil {
+		if err.Error() == "open "+path+": The system cannot find the file specified." {
+			defConfig := `[telegram]
 TelegramAPIToken = "123456789:AbCdEf5705JwQr948bRjr78buyG8UYUg95f"
 
 [settings]
@@ -45,10 +46,11 @@ defaultPassword = "ubnt"
 [allowedUsers.userAlias2]
 	ID = 12345678
 	`
-		ioutil.WriteFile(path, []byte(defConfig), os.ModeExclusive)
-		log.Println("Config file not found. It has been created.")
-		os.Exit(1)
-	} else {
+			ioutil.WriteFile(path, []byte(defConfig), os.ModeExclusive)
+			log.Println("Config file not found. It has been created.")
+			os.Exit(1)
+
+		}
 		log.Panic(err)
 	}
 	configString := string(b)

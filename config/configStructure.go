@@ -16,6 +16,7 @@ type settings struct {
 	DefaultUsername string
 	DefaultPassword string
 	Debug           bool
+	MaxMessageColumns int
 }
 
 type knownservers struct {

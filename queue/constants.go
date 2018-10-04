@@ -16,6 +16,6 @@ Those constants are used to indicate how a command failure should be handled
 */
 const (
 	Ignore = iota
-	Retry	
+	Retry
 	Interrupt
 )

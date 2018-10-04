@@ -37,8 +37,8 @@ This program was created to remotely execute pre-made scripts via a telegram bot
 - [X] Live-reload the configuration file
 - [X] Username whitelist to caps insensitive
 - [ ] "Features" sounds bad in the config, change
-- [ ] Invert command and status order
-- [ ] Ellipsize commands too long in the status messages
+- [X] Invert command and status order
+- [X] Ellipsize commands too long in the status messages
 - [X] Create config file if it's not found
 - [X] Split report message if exceed the max allowed message size
 - [ ] Allow private key authentication

@@ -11,10 +11,7 @@ func RemoveMarkdownSyntax(s string) string {
 func EscapeXMLTags(s string) string {
 	return strings.Replace(
 		strings.Replace(
-			strings.Replace(
-				strings.Replace(
-					s, "\"", "&quot;", -1),
-				"&", "&amp;", -1),
+			strings.Replace(s, "&", "&amp;", -1),
 			">", "&gt;", -1),
 		"<", "&lt;", -1)
 }

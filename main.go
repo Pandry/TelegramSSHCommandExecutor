@@ -604,13 +604,3 @@ func sendReport(q *queue.Queue, bot *tgbotapi.BotAPI, update *tgbotapi.Update) {
 	}
 }
 
-func escapeXMLTags(s string) string {
-	return strings.Replace(
-		strings.Replace(
-			strings.Replace(
-				strings.Replace(
-					s, "\"", "&quot;", -1),
-				"&", "&amp;", -1),
-			">", "&gt;", -1),
-		"<", "&lt;", -1)
-}

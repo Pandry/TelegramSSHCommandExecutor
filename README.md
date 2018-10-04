@@ -13,12 +13,11 @@ This program was created to remotely execute pre-made scripts via a telegram bot
     maxMessageColumns = 35
     defaultUsername = "pandry"
     defaultPassword = "v3rys3cr3tPassw0rD!"
-
+    
 [features]
-    [features.listroot]
-        commands = ["ls -la /"]
-        expectedOutputs = [".*", ""]
-        onFaliure = "interrupt" # retry, ignore or interrupt
+    [features.list]
+        commands = ["echo $PATH", "notexistingcommand", "cd /var && pwd ", "wget -nv -O /dev/null https://speed.hetzner.de/100MB.bin", "whoami"]
+        expectedOutputs = [".*/usr/bin.*", "", "/etc"]
 
 [knownservers]
     [knownservers.home]
@@ -31,7 +30,8 @@ This program was created to remotely execute pre-made scripts via a telegram bot
         Username = "Pandry"
 ```
 **Screenshot**
-![](https://vgy.me/UifhNJ.png)
+![](https://vgy.me/8zZ6Wm.png)
+![](https://vgy.me/DejKOR.png)
 
 
 

@@ -10,12 +10,15 @@ This program was created to remotely execute pre-made scripts via a telegram bot
 
 [settings]
     debug = false
+    maxMessageColumns = 35
     defaultUsername = "pandry"
     defaultPassword = "v3rys3cr3tPassw0rD!"
 
 [features]
     [features.listroot]
         commands = ["ls -la /"]
+        expectedOutputs = [".*", ""]
+        onFaliure = "interrupt" # retry, ignore or interrupt
 
 [knownservers]
     [knownservers.home]

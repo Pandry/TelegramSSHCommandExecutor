@@ -52,7 +52,7 @@ func (q *Queue) GetScriptsStatus() []string {
 		switch cmd.Status {
 		//✅🕐⚙️❌❗️
 		case Queued:
-			cres = " 🕐  Queued         "
+			cres = "🕐  Queued          "
 			break
 		case Executing:
 			cres = "⚙️  Executing      "
@@ -61,7 +61,7 @@ func (q *Queue) GetScriptsStatus() []string {
 			cres = "✅  Success          "
 			break
 		case Error:
-			cres = " ❌  Error            "
+			cres = "❌  Error             "
 			break
 		case OutputMismatch:
 			cres = "❗️  Output Mismatch"

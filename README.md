@@ -29,7 +29,9 @@ This program was created to remotely execute pre-made scripts via a telegram bot
     [allowedUsers.pandry]
         Username = "Pandry"
 ```
-**Screenshot**
+
+**Screenshots**   
+
 ![](https://vgy.me/8zZ6Wm.png)
 ![](https://vgy.me/DejKOR.png)
 
